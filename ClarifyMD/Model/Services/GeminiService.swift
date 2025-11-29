@@ -18,8 +18,8 @@ class GeminiService: GeminiServiceProtocol {
     
     init(apiClient: APIClient) {
         self.apiClient = apiClient
-        self.baseURL = environment["base_url"] ?? ""
-        self.apiKey = environment["api_key"] ?? ""
+        self.baseURL = environment["base_url"]!
+        self.apiKey = environment["api_key"]!
     }
     
     func generateContent(prompt: String, completion: @escaping (Result<String, Error>) -> Void) {
@@ -31,6 +31,8 @@ class GeminiService: GeminiServiceProtocol {
         urlComponents.queryItems = [
             URLQueryItem(name: "key", value: apiKey)
         ]
+        
+        print(urlComponents.queryItems)
         
         guard let url = urlComponents.url else {
             completion(.failure(APIError.invalidURL))
