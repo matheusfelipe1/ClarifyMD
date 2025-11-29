@@ -16,6 +16,11 @@
 			path = ClarifyMD;
 			sourceTree = "<group>";
 		};
+		7427CFA92EDB4DB1009DC29C /* Core */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Core;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +37,7 @@
 		7427CF802EDB47C5009DC29C = {
 			isa = PBXGroup;
 			children = (
+				7427CFA92EDB4DB1009DC29C /* Core */,
 				7427CF8B2EDB47C5009DC29C /* ClarifyMD */,
 				7427CF8A2EDB47C5009DC29C /* Products */,
 			);
@@ -62,6 +68,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7427CF8B2EDB47C5009DC29C /* ClarifyMD */,
+				7427CFA92EDB4DB1009DC29C /* Core */,
 			);
 			name = ClarifyMD;
 			packageProductDependencies = (
