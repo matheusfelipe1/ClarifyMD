@@ -14,11 +14,13 @@ struct ClarifyView: View {
     var body: some View {
         VStack(spacing: 0) {
             Image("clarifyText")
-            if let error = viewModel.errorMessage {
+            Spacer().frame(height: 24)
+            if let error = viewModel.errorMessage, viewModel.terms.isEmpty {
                 Text("⚠️ Erro: \(error)")
                     .foregroundColor(.red)
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
+                
             }
             if !viewModel.terms.isEmpty {
                 List {
@@ -35,6 +37,8 @@ struct ClarifyView: View {
                 ContentUnavailableView("Cole ou digite seu texto médico.",
                                        systemImage: "doc.text.magnifyingglass")
             }
+            Spacer()
+            
             Divider().padding(.vertical)
 
             ClarifyTextEditor(inputText: $input, isLoading: $viewModel.isLoading) {
@@ -42,7 +46,6 @@ struct ClarifyView: View {
             }
 
         }
-        .background(Color(red: 18/255, green: 26/255, blue: 36/255))
         .edgesIgnoringSafeArea(.top)
     }
 }
