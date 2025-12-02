@@ -20,7 +20,7 @@ class MedicalAnalysisService {
         let prompt = """
         Analise este texto e extraia os termos médicos principais: "\(texto)"
         Liste APENAS os termos separados por vírgula.
-        Ressalto: Caso não houver um termo MEDICINAL TÉCNICO. Por favor, desconsiderar o envio do prompt, enviando APENAS palavra chave 'desconsiderar'
+        Caso não houver um termo MEDICINAL TÉCNICO. Por favor, retornar APENAS a palavra-chave 'desconsiderar'
         Resposta:
         """
         

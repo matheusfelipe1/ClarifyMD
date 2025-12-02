@@ -51,8 +51,12 @@ struct ClarifyTextEditor: View {
                             .frame(width: 60, height: 90)
                             .cornerRadius(4)
                         if !documentWasProcessed {
-                            Color.blue.opacity(0.3).onAppear {
-                                ProgressView()
+                            Color.black.opacity(0.5)
+                                .scaledToFit()
+                                .frame(width: 60, height: 90)
+                                .cornerRadius(4)
+                                    .onAppear {
+                                        ProgressView().foregroundColor(.blue)
                             }
                         }
                     }
