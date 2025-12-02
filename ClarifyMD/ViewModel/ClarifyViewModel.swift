@@ -23,6 +23,7 @@ class ClarifyViewModel: ObservableObject {
     @Published var terms: [TermAnalysis] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var myMessage: MyMessages = MyMessages(text: "", textToPreview: "", previewImage: nil)
     
     private let medicalAnalysisService: MedicalAnalysisService
     
@@ -32,12 +33,13 @@ class ClarifyViewModel: ObservableObject {
     
     
     @MainActor
-    func startAnalysis(with input: String) {
+    func startAnalysis(with input: MyMessages) {
         self.terms = []
         self.errorMessage = nil
         self.isLoading = true
+        self.myMessage = input
         
-        self.medicalAnalysisService.identifierTermAnalysis(texto: input) { [weak self] result in
+        self.medicalAnalysisService.identifierTermAnalysis(texto: input.text) { [weak self] result in
             guard let self = self else { return }
             
             DispatchQueue.main.async {

@@ -19,6 +19,7 @@ class APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 500.0
 
         if let body = body {
             do {

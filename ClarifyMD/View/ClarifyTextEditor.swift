@@ -7,133 +7,204 @@
 
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
+import PDFKit
 
 struct ClarifyTextEditor: View {
+    private var isTextFocused: FocusState<Bool>.Binding
     @State private var showImagePicker = false
     @State private var showCamera = false
     @State private var showDocumentPicker = false
-    @State private var selectedImage: UIImage? {
-        didSet {
-                if let image = selectedImage {
-                    computerVision.extractTextFromImage(image) { text in
-                        onAnalysisComplete(text)
-                    }
-                }
-            }
-    }
-    
+    @State private var documentWasProcessed: Bool = false
+    @State private var selectedImage: UIImage?
+    @State private var previewImage: UIImage?
+    @State private var selectedPDFURL: URL?
     @Binding private var isLoading: Bool
     @Binding private var inputText: String
+    @State private var documentExtracted: String = ""
     @State private var textEditorHeight: CGFloat = 40
 
-    private var onAnalysisComplete: (String) -> Void
+    private var onAnalysisComplete: (MyMessages) -> Void
     
     let computerVision = ComputerVision()
     
-    init(inputText: Binding<String>, isLoading: Binding<Bool>, onAnalysisComplete: @escaping (String) -> Void) {
+    init(inputText: Binding<String>,
+         isLoading: Binding<Bool>,
+         isTextFocused: FocusState<Bool>.Binding,
+         onAnalysisComplete: @escaping (MyMessages) -> Void) {
+        
         _isLoading = isLoading
         _inputText = inputText
+        self.isTextFocused = isTextFocused
         self.onAnalysisComplete = onAnalysisComplete
     }
     
     
     var body: some View {
-        HStack {
-            Menu {
-                Button("Tirar foto", action: { self.showCamera = true})
-                Button("Galeria", action:  { self.showImagePicker = true })
-                Button("PDF", action:  { self.showDocumentPicker = true })
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2)
-                    .padding(10)
-                    .foregroundColor(.white)
-                    .clipShape(Circle())
-            }
-                       .padding()
-            ZStack(alignment: .topLeading) {
-                Text(inputText)
-                    .foregroundColor(.clear)
-                    .background(GeometryReader { geometry in
-                        Color(.darkGray)
-                            .onAppear {
-                                textEditorHeight = max(40, geometry.size.height)
+        VStack {
+            if let preview = previewImage {
+                HStack {
+                    ZStack(alignment: .center) {
+                        Image(uiImage: preview)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 90)
+                            .cornerRadius(4)
+                        if !documentWasProcessed {
+                            Color.blue.opacity(0.3).onAppear {
+                                ProgressView()
                             }
-                            .onChange(of: inputText) { _ in
-                                textEditorHeight = max(40, geometry.size.height)
-                            }
-                    })
-                    .padding(.top, 8)
-                    .padding(.leading, 5)
-                
-                TextEditor(text: $inputText)
-                    .foregroundColor(Color.white)
-                    .scrollContentBackground(.hidden)
-                    .background(Color(.darkGray))
-                    .frame(height: textEditorHeight)
-                    .background(GeometryReader { geometry in
-                        Color(.darkGray)
-                            .onAppear {
-                                textEditorHeight = geometry.size.height
-                            }
-                    })
-                    .overlay {
-                        if inputText.isEmpty {
-                            Text("Digite sua nota ou termo médico...")
-                                .foregroundColor(Color(.placeholderText))
-                                .padding(.leading, 8)
-                                .allowsHitTesting(false)
                         }
                     }
-                
+                    
+                    VStack(alignment: .leading) {
+                        Text("Anexo")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text(selectedPDFURL?.lastPathComponent ?? "Documento")
+                            .font(.subheadline)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    Button("X") {
+                        self.selectedPDFURL = nil
+                        self.previewImage = nil
+                        self.selectedImage = nil
+                        self.documentWasProcessed = false
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            .background(Color(.darkGray))
-            .padding(.vertical, 16)
-                
-            
-            Button {
-                guard isLoading == false else { return }
-                self.onAnalysisComplete(inputText)
-            } label: {
-                if isLoading {
-                    ProgressView()
-                } else {
-                    Image(systemName: "paperplane.fill")
+            HStack {
+                Menu {
+                    Button("PDF") { self.showDocumentPicker = true }
+                    Button("Galeria") { self.showImagePicker = true }
+                    Button("Camera") { self.showCamera = true }
+                } label: {
+                    Image(systemName: "plus")
                         .font(.title2)
                         .padding(10)
-                        .background(Color.blue)
                         .foregroundColor(.white)
                         .clipShape(Circle())
+                }.padding(.leading, 8)
+                
+                ZStack(alignment: .topLeading) {
+                    Text(inputText)
+                        .foregroundColor(.clear)
+                        .background(GeometryReader { geometry in
+                            Color(.darkGray)
+                                .onAppear {
+                                    textEditorHeight = max(40, geometry.size.height)
+                                }
+                                .onChange(of: inputText) { _ in
+                                    textEditorHeight = max(40, geometry.size.height)
+                                }
+                        })
+                        .padding(.top, 8)
+                    
+                    TextEditor(text: $inputText)
+                        .focused(isTextFocused)
+                        .foregroundColor(Color.white)
+                        .scrollContentBackground(.hidden)
+                        .background(Color(.darkGray))
+                        .frame(height: textEditorHeight)
+                        .background(GeometryReader { geometry in
+                            Color(.darkGray)
+                                .onAppear {
+                                    textEditorHeight = geometry.size.height
+                                }
+                        })
+                        .overlay(alignment: .leading) {
+                            if inputText.isEmpty {
+                                Text("Digite sua nota ou termo médico")
+                                    .foregroundColor(Color(.placeholderText))
+                                    .font(.system(size: 14.0))
+                                    .multilineTextAlignment(.leading)
+                                    .allowsHitTesting(false)
+                                    .padding(.leading, 8)
+                            }
+                        }
+                    
+                }
+                .background(Color(.darkGray))
+                .padding(.vertical, 8)
+                
+                if !inputText.isEmpty || self.documentWasProcessed {
+                    Button {
+                        guard isLoading == false else { return }
+                        
+                        let myMessage = MyMessages(
+                            text: self.documentExtracted + inputText,
+                            textToPreview: inputText,
+                            previewImage: self.previewImage
+                        )
+                        
+                        self.onAnalysisComplete(myMessage)
+                        
+                        self.inputText = ""
+                        self.documentExtracted = ""
+                        self.selectedPDFURL = nil
+                        self.previewImage = nil
+                        self.selectedImage = nil
+                        self.documentWasProcessed = false
+                        
+                    } label: {
+                        Image(systemName: "paperplane.fill")
+                            .font(.title2)
+                            .padding(10)
+                            .padding(.trailing, 8)
+                            .foregroundColor(.white)
+                            .clipShape(Circle())
+                        
+                    }
+                    .padding(.trailing, 10)
+                } else if inputText.isEmpty, self.isLoading {
+                    ProgressView().padding(.trailing, 8)
+                }
+                
+            }.sheet(isPresented: $showImagePicker) {
+                ImagePicker(selectedImage: $selectedImage)
+            }
+            .sheet(isPresented: $showCamera) {
+                CameraView(selectedImage: $selectedImage)
+            }
+            .sheet(isPresented: $showDocumentPicker) {
+                DocumentPicker(selectedPDFURL: $selectedPDFURL)
+            }
+            .onChange(of: selectedImage) { newImage in
+                if let image = newImage {
+                    self.documentWasProcessed = false
+                    self.previewImage = image
+                    computerVision.extractTextFromImage(image) { text in
+                        self.documentWasProcessed = true
+                        self.documentExtracted = text
+                    }
                 }
             }
-            .disabled(inputText.isEmpty)
-            .padding(.trailing, 10)
+            .onChange(of: selectedPDFURL) { pdf in
+                if let newPDF = pdf {
+                    self.documentWasProcessed = false
+                    self.previewImage = getPDFThumbnail(from: newPDF)
+                    if let text = computerVision.extractText(from: newPDF) {
+                        self.documentWasProcessed = true
+                        self.documentExtracted = text
+                    }
+                    newPDF.stopAccessingSecurityScopedResource()
+                }
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(.darkGray), lineWidth: 1)
+            )
+            .background(Color(.darkGray))
+            .clipShape(.buttonBorder)
+            .padding(.all, 16)
             
-        }.sheet(isPresented: $showImagePicker) {
-            ImagePicker(selectedImage: $selectedImage)
         }
-        .sheet(isPresented: $showCamera) {
-            CameraView(selectedImage: $selectedImage)
-        }
-        .sheet(isPresented: $showDocumentPicker) {
-            DocumentPicker(selectedImage: $selectedImage)
-        }
-        .onChange(of: selectedImage) { newImage in
-            if let image = newImage {
-                computerVision.extractTextFromImage(image) { text in
-                    onAnalysisComplete(text)
-                }
-            }
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(.darkGray), lineWidth: 1)
-        )
-        .background(Color(.darkGray))
-        .clipShape(.buttonBorder)
-        .padding(.all, 16)
-        
-       
     }
 }
 
@@ -219,52 +290,67 @@ struct ClarifyTextEditor: View {
     }
 
     // MARK: Documentos de PDF
-    struct DocumentPicker: UIViewControllerRepresentable {
-        @Binding var selectedImage: UIImage?
-        @Environment(\.dismiss) private var dismiss
+struct DocumentPicker: UIViewControllerRepresentable {
+    // Alterado para aceitar a URL do PDF
+    @Binding var selectedPDFURL: URL?
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        // AQUI: Usando apenas .pdf
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf])
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: DocumentPicker
         
-        func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf, .image])
-            picker.delegate = context.coordinator
-            picker.allowsMultipleSelection = false
-            return picker
+        init(_ parent: DocumentPicker) {
+            self.parent = parent
         }
         
-        func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-        
-        func makeCoordinator() -> Coordinator {
-            Coordinator(self)
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else {
+                parent.dismiss()
+                return
+            }
+            
+            _ = url.startAccessingSecurityScopedResource()
+            
+            parent.selectedPDFURL = url
+            
+            parent.dismiss()
         }
         
-        class Coordinator: NSObject, UIDocumentPickerDelegate {
-            let parent: DocumentPicker
-            
-            init(_ parent: DocumentPicker) {
-                self.parent = parent
-            }
-            
-            func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-                guard let url = urls.first else { return }
-                
-                // Aqui você pode processar o PDF ou imagem selecionada
-                print("Documento selecionado: \(url)")
-                
-                // Se for uma imagem, você pode carregar
-                if url.pathExtension.lowercased() == "jpg" ||
-                   url.pathExtension.lowercased() == "jpeg" ||
-                   url.pathExtension.lowercased() == "png" {
-                    
-                    if let data = try? Data(contentsOf: url),
-                       let image = UIImage(data: data) {
-                        parent.selectedImage = image
-                    }
-                }
-                
-                parent.dismiss()
-            }
-            
-            func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-                parent.dismiss()
-            }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            parent.dismiss()
         }
     }
+}
+
+
+func getPDFThumbnail(from pdfURL: URL, size: CGSize = CGSize(width: 80, height: 120)) -> UIImage? {
+    let isAccessing = pdfURL.startAccessingSecurityScopedResource()
+    
+    defer {
+        if isAccessing {
+            pdfURL.stopAccessingSecurityScopedResource()
+        }
+    }
+    
+    guard let pdfDocument = PDFDocument(url: pdfURL),
+          let page = pdfDocument.page(at: 0) else {
+        return nil
+    }
+    
+    let thumbnail = page.thumbnail(of: size, for: .cropBox)
+    
+    return thumbnail
+}

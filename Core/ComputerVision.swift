@@ -7,7 +7,7 @@
 
 import Vision
 import UIKit
-
+import PDFKit
 
 class ComputerVision{
     func extractTextFromImage(_ image: UIImage, completion: @escaping (String) -> Void) {
@@ -52,5 +52,34 @@ class ComputerVision{
                 completion("")
             }
         }
+    }
+    
+    func extractText(from pdfURL: URL) -> String? {
+        // 1. Tentar criar um objeto PDFDocument a partir da URL
+        guard let pdfDocument = PDFDocument(url: pdfURL) else {
+            print("❌ Erro: Não foi possível carregar o documento PDF da URL.")
+            return nil
+        }
+        
+        let fullText = NSMutableString()
+        
+        // 2. Iterar por todas as páginas do documento
+        for i in 0..<pdfDocument.pageCount {
+            // Obter a página atual
+            guard let pdfPage = pdfDocument.page(at: i) else {
+                continue
+            }
+            
+            // 3. Extrair o texto da página
+            if let pageText = pdfPage.string {
+                fullText.append(pageText)
+                
+                // Opcional: Adicionar uma quebra de linha ou separador entre as páginas
+                fullText.append("\n\n--- Página \(i + 1) ---\n\n")
+            }
+        }
+        
+        // 4. Retornar a string completa
+        return fullText as String
     }
 }
